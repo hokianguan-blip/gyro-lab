@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gyro Lab - Rigidity in Space &amp; Precession</title>
+<style>
+:root{
+  --bg1:#150a35; --bg2:#2a0e5c; --card:#241352; --card2:#2e1a66;
+  --pink:#ff4fa3; --cyan:#2ee6d6; --yellow:#ffd23f; --orange:#ff8a3d; --lime:#8aff5c; --purple:#8b5cf6; --red:#ff4d4d;
+  --text:#f4f0ff; --muted:#b9acf0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--text);
+  background:radial-gradient(1200px 700px at 15% -10%,#4b1d9a 0%,transparent 60%),radial-gradient(900px 600px at 100% 0%,#0f6a8a 0%,transparent 55%),linear-gradient(160deg,var(--bg1),var(--bg2));
+  min-height:100vh}
+#errbar{display:none;background:#b00020;color:#fff;padding:8px 14px;font-size:13px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:14px 22px}
+.logo{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:30px;
+  background:conic-gradient(from 0deg,var(--pink),var(--yellow),var(--cyan),var(--purple),var(--pink));box-shadow:0 6px 20px rgba(255,79,163,.45)}
+header h1{margin:0;font-size:26px;letter-spacing:.3px;background:linear-gradient(90deg,var(--yellow),var(--pink),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.tabs{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+.tab{border:0;cursor:pointer;color:#fff;font-weight:700;font-size:15px;padding:11px 20px;border-radius:999px;background:#3a2386;transition:.15s}
+.tab:hover{transform:translateY(-1px);background:#4a2da8}
+.tab.active.t1{background:linear-gradient(90deg,var(--pink),var(--orange));box-shadow:0 6px 18px rgba(255,79,163,.45)}
+.tab.active.t2{background:linear-gradient(90deg,var(--cyan),var(--purple));box-shadow:0 6px 18px rgba(46,230,214,.4)}
+main{padding:0 22px 26px}
+.module{display:none;grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr);gap:18px;align-items:start}
+.module.active{display:grid}
+.stage{position:relative;border-radius:22px;overflow:hidden;min-height:560px;height:calc(100vh - 130px);max-height:760px;
+  background:radial-gradient(700px 500px at 50% 40%,#3b1a86 0%,#1b0d45 55%,#0f0629 100%);border:2px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.stage canvas.main{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.stage canvas.main:active{cursor:grabbing}
+.hud{position:absolute;left:14px;top:12px;display:flex;flex-direction:column;gap:6px;pointer-events:none;max-width:60%}
+.chip{display:inline-block;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700;background:rgba(20,8,50,.78);border:1.5px solid rgba(255,255,255,.25)}
+.chip.pink{border-color:var(--pink);color:#ffd0e7}.chip.cyan{border-color:var(--cyan);color:#c9fff9}.chip.yellow{border-color:var(--yellow);color:#fff1b8}.chip.lime{border-color:var(--lime);color:#e3ffd2}
+.inst{position:absolute;right:12px;top:12px;width:150px;text-align:center;font-size:11px;color:#d9ccff;pointer-events:none}
+.inst canvas{width:140px;height:140px;border-radius:50%;display:block;margin:0 auto 4px;box-shadow:0 4px 18px rgba(0,0,0,.5)}
+.inst.sq canvas{border-radius:16px;background:rgba(15,6,41,.85);border:2px solid rgba(255,255,255,.3)}
+.viewbar{position:absolute;left:12px;bottom:12px;right:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.viewbar .hint{color:var(--muted);font-size:12px;margin-left:auto;background:rgba(20,8,50,.6);padding:5px 10px;border-radius:999px}
+.vbtn{border:0;cursor:pointer;color:#fff;font-weight:700;font-size:12px;padding:7px 12px;border-radius:999px;background:rgba(90,60,190,.85)}
+.vbtn:hover{background:rgba(130,90,240,.95)}
+.panel{display:flex;flex-direction:column;gap:14px;max-height:calc(100vh - 130px);overflow:auto;padding-right:4px}
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1.5px solid rgba(255,255,255,.1);border-radius:18px;padding:14px 16px}
+.card h2{margin:0 0 6px;font-size:19px}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--yellow)}
+.card p{margin:6px 0;font-size:14px;line-height:1.5;color:#e9e2ff}
+.hero h2{background:linear-gradient(90deg,var(--yellow),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;font-size:22px}
+.legend{display:flex;flex-direction:column;gap:5px;font-size:13px}
+.legend span.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
+.row{display:flex;align-items:center;gap:10px;margin:9px 0;flex-wrap:wrap}
+.row label{font-size:13px;font-weight:600;min-width:112px;color:#fff}
+.row input[type=range]{flex:1;min-width:120px;accent-color:var(--pink);height:6px}
+.val{font-weight:800;color:var(--yellow);min-width:52px;text-align:right;font-size:13px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.btn{border:0;cursor:pointer;color:#fff;font-weight:800;font-size:13px;padding:10px 14px;border-radius:12px;transition:.12s;background:#4a2da8}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.12)}
+.btn.pink{background:linear-gradient(90deg,var(--pink),var(--orange))}
+.btn.cyan{background:linear-gradient(90deg,#14b8c8,var(--purple))}
+.btn.lime{background:linear-gradient(90deg,#3ecf5a,#12a3a0)}
+.btn.yellow{background:linear-gradient(90deg,var(--yellow),var(--orange));color:#3a1c00}
+.btn.sel{outline:3px solid var(--yellow)}
+.btn.off{background:#5b4a99}
+.readouts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ro{background:rgba(0,0,0,.28);border-radius:12px;padding:8px 10px}
+.ro small{display:block;color:var(--muted);font-size:11px}
+.ro b{font-size:20px;color:var(--cyan)}
+.meter{height:14px;border-radius:99px;background:rgba(0,0,0,.35);overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--lime),var(--yellow),var(--pink));transition:width .1s}
+.seg{display:flex;background:rgba(0,0,0,.3);border-radius:14px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;cursor:pointer;color:#fff;font-weight:800;font-size:13px;padding:9px 10px;border-radius:11px;background:transparent}
+.seg button.on{background:linear-gradient(90deg,var(--cyan),var(--purple))}
+.stepcard h2{font-size:20px;color:var(--yellow)}
+.stepno{display:inline-block;font-size:12px;font-weight:800;background:var(--pink);padding:3px 10px;border-radius:99px;margin-bottom:6px}
+.dots{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.dots button{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-size:11px;font-weight:800;cursor:pointer;padding:0}
+.dots button.done{background:var(--purple);border-color:var(--purple)}
+.dots button.now{background:var(--yellow);border-color:var(--yellow);color:#3a1c00;transform:scale(1.18)}
+.clockgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qhead{font-size:12px;color:var(--muted);font-weight:700}
+.qtext{font-size:15px;font-weight:700;margin:6px 0 10px;line-height:1.4}
+.qopts{display:flex;flex-direction:column;gap:7px}
+.qopt{text-align:left;border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:#fff;border-radius:12px;padding:9px 12px;font-size:13.5px;cursor:pointer;font-family:inherit}
+.qopt:hover{border-color:var(--cyan)}
+.qopt.right{border-color:var(--lime);background:rgba(90,220,90,.22)}
+.qopt.wrong{border-color:var(--red);background:rgba(255,77,77,.22)}
+.qfb{margin-top:10px;font-size:13.5px;line-height:1.45;min-height:18px}
+.qnav{margin-top:8px}
+.tip{font-size:12.5px;color:var(--muted)}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:800;margin-right:6px}
+.b-pos{background:var(--pink)}.b-rate{background:var(--cyan);color:#06303a}
+footer{padding:0 22px 22px;color:var(--muted);font-size:12px}
+@media (max-width:980px){
+  .module.active{grid-template-columns:1fr}
+  .stage{height:70vh;min-height:430px}
+  .panel{max-height:none;overflow:visible}
+  .inst{transform:scale(.8);transform-origin:top right}
+}
+</style>
+</head>
+<body>
+<div id="errbar"></div>
+<header>
+  <div class="logo">&#127744;</div>
+  <div>
+    <h1>Gyro Lab</h1>
+    <p>Two superpowers of a spinning wheel &middot; AV.06 Gyroscopic Instruments &middot; works offline, no downloads</p>
+  </div>
+  <nav class="tabs">
+    <button class="tab t1 active" id="tab1" type="button">1 &middot; Rigidity in Space</button>
+    <button class="tab t2" id="tab2" type="button">2 &middot; Precession</button>
+  </nav>
+</header>
+
+<main>
+<!-- =============== MODULE 1 =============== -->
+<section class="module active" id="mod1">
+  <div class="stage">
+    <canvas class="main" id="c1"></canvas>
+    <div class="hud" id="hud1"></div>
+    <div class="inst"><canvas id="inst" width="280" height="280"></canvas><span id="instCap">Attitude indicator (driven by the gyro)</span></div>
+    <div class="viewbar">
+      <button class="vbtn" type="button" id="v1reset">&#8635; Reset view</button>
+      <span class="hint">Drag the picture to look around</span>
+    </div>
+  </div>
+  <aside class="panel">
+    <div class="card hero">
+      <h2>Rigidity in Space</h2>
+      <p>A fast-spinning wheel <b>refuses to change where its axle points</b>. Turn the aircraft any way you like &mdash; the spinning rotor keeps pointing at the same spot in space.</p>
+    </div>
+    <div class="card">
+      <h3>What am I looking at?</h3>
+      <div class="legend">
+        <div><span class="dot" style="background:#ff4fa3"></span><b>Pink wheel</b> = the spinning rotor (weight at the rim)</div>
+        <div><span class="dot" style="background:#2ee6d6"></span><b>Cyan arrow</b> = the gyro axle (spin axis)</div>
+        <div><span class="dot" style="background:#ff8a3d"></span><b>Orange plane</b> = the aircraft / instrument case</div>
+        <div><span class="dot" style="background:#ffd23f"></span><b>Yellow star</b> = a fixed point in space</div>
+        <div><span class="dot" style="background:#f06aff"></span><b>Magenta arrow</b> = the aircraft's own &ldquo;UP&rdquo;</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Your controls</h3>
+      <div class="btns" style="margin-top:0">
+        <button class="btn lime" type="button" id="rotorBtn">Rotor: ON</button>
+        <button class="btn yellow" type="button" id="demoBtn">&#9992; Auto-fly demo</button>
+        <button class="btn pink" type="button" id="bumpBtn">&#128165; Bump the axle</button>
+        <button class="btn cyan" type="button" id="realignBtn">&#11088; Re-align to star</button>
+        <button class="btn" type="button" id="resetBtn">Reset all</button>
+      </div>
+      <div class="row"><label for="sSpeed">Rotor speed</label><input type="range" id="sSpeed" min="0" max="100" value="85"><span class="val" id="vSpeed">85%</span></div>
+      <div class="row"><label for="sMass">Rotor weight</label><input type="range" id="sMass" min="1" max="30" value="15"><span class="val" id="vMass">1.5&times;</span></div>
+      <div class="row"><label for="sPitch">Pitch (nose)</label><input type="range" id="sPitch" min="-60" max="60" value="0"><span class="val" id="vPitch">0&deg;</span></div>
+      <div class="row"><label for="sRoll">Roll (bank)</label><input type="range" id="sRoll" min="-90" max="90" value="0"><span class="val" id="vRoll">0&deg;</span></div>
+      <div class="row"><label for="sYaw">Yaw (turn)</label><input type="range" id="sYaw" min="-180" max="180" value="0"><span class="val" id="vYaw">0&deg;</span></div>
+      <p class="tip">Try this: (1) tilt the aircraft with the rotor ON, then (2) switch the rotor OFF and tilt again, then (3) press &ldquo;Bump the axle&rdquo; at 100% and at 10% speed.</p>
+    </div>
+    <div class="card">
+      <h3>Live readings</h3>
+      <div class="readouts">
+        <div class="ro"><small>Aircraft tilt from level</small><b id="r1a">0.0&deg;</b></div>
+        <div class="ro"><small>Axle drift away from star</small><b id="r1b">0.0&deg;</b></div>
+      </div>
+      <div style="margin-top:10px;font-size:13px;font-weight:700">Rigidity meter <span class="tip" id="rigTxt"></span></div>
+      <div class="meter"><i id="rigBar"></i></div>
+      <p class="tip">Rigidity grows with: &#9312; faster spin, &#9313; heavier rotor, &#9314; weight concentrated at the rim.</p>
+    </div>
+    <div class="card" id="quiz1"></div>
+    <div class="card">
+      <h3>Why it matters on the aircraft</h3>
+      <p><span class="badge b-pos">POSITION GYROS</span>Gyro horizon (attitude indicator) and directional gyro use <b>rigidity in space</b>. The rotor holds its position while the aircraft moves around it &mdash; that is how the instrument shows pitch, bank and heading.</p>
+      <p>Slow rotor = weak rigidity = unreliable reading. That is why a run-down gyro wanders and why the instrument must reach full speed before flight.</p>
+    </div>
+  </aside>
+</section>
+
+<!-- =============== MODULE 2 =============== -->
+<section class="module" id="mod2">
+  <div class="stage">
+    <canvas class="main" id="c2"></canvas>
+    <div class="hud" id="hud2"></div>
+    <div class="inst sq"><canvas id="top2" width="280" height="280"></canvas><span>Top-down view (what you can't see from the front)</span></div>
+    <div class="viewbar">
+      <button class="vbtn" type="button" data-view="3d">3D view</button>
+      <button class="vbtn" type="button" data-view="front">Front view</button>
+      <button class="vbtn" type="button" data-view="top">Top view</button>
+      <button class="vbtn" type="button" data-view="side">Side view</button>
+      <span class="hint">Drag the picture to look around</span>
+    </div>
+  </div>
+  <aside class="panel">
+    <div class="card hero">
+      <h2>Precession</h2>
+      <p>Push a spinning wheel and it does <b>not</b> tip where you pushed. It reacts <b>90&deg; later, in the direction of spin</b>. Push at 12 &rarr; feel it at 3 (for a clockwise wheel).</p>
+    </div>
+    <div class="card">
+      <div class="seg">
+        <button type="button" id="modeStep" class="on">12 steps (slow-mo)</button>
+        <button type="button" id="modeFree">Free play</button>
+      </div>
+    </div>
+
+    <!-- guided -->
+    <div id="guided">
+      <div class="card stepcard">
+        <span class="stepno" id="stNo">Step 1 of 12</span>
+        <h2 id="stTitle"></h2>
+        <p id="stTxt"></p>
+        <div class="dots" id="stDots"></div>
+        <div class="btns">
+          <button class="btn" type="button" id="stPrev">&#9664; Back</button>
+          <button class="btn pink" type="button" id="stNext">Next &#9654;</button>
+          <button class="btn lime" type="button" id="stAuto">&#9654; Auto-play</button>
+          <button class="btn" type="button" id="stRestart">&#10226; Restart</button>
+        </div>
+        <div class="row" style="margin-top:12px"><label>Animation speed</label>
+          <div class="btns" style="margin:0">
+            <button class="btn" type="button" data-sf="0.25">&frac14;&times;</button>
+            <button class="btn sel" type="button" data-sf="0.5">&frac12;&times;</button>
+            <button class="btn" type="button" data-sf="1">1&times;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- free play -->
+    <div id="free" style="display:none">
+      <div class="card">
+        <h3>Your controls</h3>
+        <div class="row"><label>Wheel spins</label>
+          <div class="btns" style="margin:0">
+            <button class="btn sel" type="button" id="dirCW">&#8635; Clockwise</button>
+            <button class="btn" type="button" id="dirCCW">&#8634; Anticlockwise</button>
+          </div>
+        </div>
+        <p class="tip" style="margin-top:-2px">&ldquo;Clockwise&rdquo; as you look at the front face of the wheel.</p>
+        <div class="row"><label>Push the rim at</label>
+          <div class="clockgrid" style="flex:1">
+            <button class="btn sel" type="button" data-pos="0">12</button>
+            <button class="btn" type="button" data-pos="90">3</button>
+            <button class="btn" type="button" data-pos="180">6</button>
+            <button class="btn" type="button" data-pos="270">9</button>
+          </div>
+        </div>
+        <div class="row"><label>Push direction</label>
+          <div class="btns" style="margin:0">
+            <button class="btn sel" type="button" id="pdAway">Away from me</button>
+            <button class="btn" type="button" id="pdToward">Toward me</button>
+          </div>
+        </div>
+        <div class="row"><label for="sSpin2">Spin speed</label><input type="range" id="sSpin2" min="20" max="100" value="70"><span class="val" id="vSpin2">70%</span></div>
+        <div class="row"><label for="sForce2">Push strength</label><input type="range" id="sForce2" min="1" max="10" value="5"><span class="val" id="vForce2">5</span></div>
+        <div class="btns">
+          <button class="btn pink" type="button" id="pushBtn">&#9654; Start pushing</button>
+          <button class="btn yellow" type="button" id="tapBtn">Quick tap</button>
+          <button class="btn" type="button" id="reset2">&#10226; Reset wheel</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>Live readings</h3>
+        <div class="readouts">
+          <div class="ro"><small>Wheel turned so far</small><b id="r2a">0&deg;</b></div>
+          <div class="ro"><small>Precession rate</small><b id="r2b">0&deg;/s</b></div>
+        </div>
+        <p class="tip">Same push, faster spin &rarr; slower precession (a stiffer wheel). Slow the wheel and it moves more easily.</p>
+      </div>
+    </div>
+
+    <div class="card" id="quiz2"></div>
+    <div class="card">
+      <h3>Why it matters on the aircraft</h3>
+      <p><span class="badge b-rate">RATE GYROS</span>Turn and slip indicator and turn coordinator use <b>precession</b>. When the aircraft turns, it pushes on the gyro; the gyro responds 90&deg; away, tilting its gimbal against a spring. The tilt is a measure of the turn rate.</p>
+      <p>Same rule on a propeller: a clockwise prop (pilot's view) pitched nose-up tends to yaw the nose to the right.</p>
+    </div>
+  </aside>
+</section>
+</main>
+<footer>Training aid for AV.06.01 Gyroscopic Instruments. Simplified model for teaching: real instruments also have friction, drift and erection systems.</footer>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- friendly error banner ---------- */
+window.onerror=function(msg,src,line){
+  var e=document.getElementById("errbar");
+  if(e){e.style.display="block";e.textContent="Something went wrong: "+msg+" (line "+line+"). Please reload the page.";}
+};
+
+function $(id){return document.getElementById(id);}
+var D2R=Math.PI/180;
+
+/* ---------- vector / matrix helpers ---------- */
+function add(a,b){return [a[0]+b[0],a[1]+b[1],a[2]+b[2]];}
+function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function mul(a,s){return [a[0]*s,a[1]*s,a[2]*s];}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function len(a){return Math.sqrt(dot(a,a));}
+function nrm(a){var l=len(a)||1;return [a[0]/l,a[1]/l,a[2]/l];}
+function rot(v,ax,ang){var c=Math.cos(ang),s=Math.sin(ang);return add(add(mul(v,c),mul(cross(ax,v),s)),mul(ax,dot(ax,v)*(1-c)));}
+function I3(){return [[1,0,0],[0,1,0],[0,0,1]];}
+function mmul(A,B){var C=[[0,0,0],[0,0,0],[0,0,0]],i,j,k,s;for(i=0;i<3;i++)for(j=0;j<3;j++){s=0;for(k=0;k<3;k++)s+=A[i][k]*B[k][j];C[i][j]=s;}return C;}
+function mvec(M,v){return [M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2],M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2],M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2]];}
+function mT(M){return [[M[0][0],M[1][0],M[2][0]],[M[0][1],M[1][1],M[2][1]],[M[0][2],M[1][2],M[2][2]]];}
+function Rx(a){var c=Math.cos(a),s=Math.sin(a);return [[1,0,0],[0,c,-s],[0,s,c]];}
+function Ry(a){var c=Math.cos(a),s=Math.sin(a);return [[c,0,s],[0,1,0],[-s,0,c]];}
+function Rz(a){var c=Math.cos(a),s=Math.sin(a);return [[c,-s,0],[s,c,0],[0,0,1]];}
+function axisAngle(M){
+  var tr=M[0][0]+M[1][1]+M[2][2];
+  var c=Math.max(-1,Math.min(1,(tr-1)/2));
+  var ang=Math.acos(c);
+  if(ang<1e-7)return null;
+  var sn=Math.sin(ang);
+  if(Math.abs(sn)<1e-6)return null;
+  var ax=[(M[2][1]-M[1][2])/(2*sn),(M[0][2]-M[2][0])/(2*sn),(M[1][0]-M[0][1])/(2*sn)];
+  return {ax:nrm(ax),ang:ang};
+}
+function clamp(x,a,b){return Math.max(a,Math.min(b,x));}
+
+/* ---------- tiny 3D painter's-algorithm renderer ---------- */
+function Scene(cv,cam){
+  this.cv=cv;this.ctx=cv.getContext("2d");this.cam=cam;this.items=[];this.W=300;this.H=300;this.dpr=1;
+  this.stars=[];
+  for(var i=0;i<70;i++){this.stars.push([Math.random(),Math.random(),0.6+Math.random()*1.6,Math.random()*6.28]);}
+}
+Scene.prototype.resize=function(){
+  var r=this.cv.getBoundingClientRect();
+  var dpr=window.devicePixelRatio||1;
+  var w=Math.max(200,Math.floor(r.width)),h=Math.max(200,Math.floor(r.height));
+  if(this.cv.width!==Math.floor(w*dpr)||this.cv.height!==Math.floor(h*dpr)){this.cv.width=Math.floor(w*dpr);this.cv.height=Math.floor(h*dpr);}
+  this.W=w;this.H=h;this.dpr=dpr;
+};
+Scene.prototype.P=function(p){
+  var c=this.cam,x=p[0],y=p[1],z=p[2];
+  var cy=Math.cos(c.yaw),sy=Math.sin(c.yaw);
+  var x1=cy*x+sy*z,z1=-sy*x+cy*z;
+  var cp=Math.cos(c.pitch),sp=Math.sin(c.pitch);
+  var y1=cp*y-sp*z1,z2=sp*y+cp*z1;
+  var f=Math.min(this.H,this.W*0.85)*(c.zoom||1);
+  var s=f/(c.dist-z2);
+  return {x:this.W/2+x1*s,y:this.H/2-y1*s+(c.oy||0),d:z2,s:s};
+};
+Scene.prototype.begin=function(t){
+  this.resize();
+  var ctx=this.ctx;
+  ctx.setTransform(this.dpr,0,0,this.dpr,0,0);
+  ctx.clearRect(0,0,this.W,this.H);
+  this.items=[];
+  for(var i=0;i<this.stars.length;i++){
+    var s=this.stars[i];
+    ctx.globalAlpha=0.35+0.4*Math.sin(t*1.5+s[3]);
+    ctx.fillStyle="#ffffff";
+    ctx.beginPath();ctx.arc(s[0]*this.W,s[1]*this.H,s[2],0,6.2832);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+};
+Scene.prototype.poly=function(pts,o){
+  var pp=[],d=0,mn=1e9,i,q;
+  for(i=0;i<pts.length;i++){q=this.P(pts[i]);pp.push(q);d+=q.d;if(q.d<mn)mn=q.d;}
+  d=(o.zmin?mn:d/pp.length)+(o.bias||0);
+  this.items.push({z:d,k:"poly",pp:pp,o:o});
+};
+Scene.prototype.line=function(a,b,o){
+  var A=this.P(a),B=this.P(b);
+  this.items.push({z:(A.d+B.d)/2+(o.bias||0),k:"line",a:A,b:B,o:o});
+};
+Scene.prototype.dot=function(p,r,o){
+  var A=this.P(p);
+  this.items.push({z:A.d+(o.bias||0),k:"dot",a:A,r:r,o:o});
+};
+Scene.prototype.label=function(p,text,o){
+  var A=this.P(p);
+  this.items.push({z:A.d+(o.bias||0)+0.0005,k:"label",a:A,t:text,o:o});
+};
+Scene.prototype.arrow=function(a,b,o){
+  var dir=nrm(sub(b,a)),h=o.head||0.32,w=o.hw||0.16;
+  var p1=nrm(cross(dir,[0.31,0.87,0.38]));var p2=cross(dir,p1);
+  var base=sub(b,mul(dir,h));
+  var lo={color:o.color,lw:o.lw||4,dash:o.dash,alpha:o.alpha,bias:o.bias};
+  this.line(a,base,lo);
+  var fo={fill:o.color,alpha:o.alpha==null?1:o.alpha,bias:(o.bias||0)};
+  this.poly([b,add(base,mul(p1,w)),sub(base,mul(p1,w))],fo);
+  this.poly([b,add(base,mul(p2,w)),sub(base,mul(p2,w))],fo);
+};
+Scene.prototype.flush=function(){
+  var it=this.items,ctx=this.ctx,i,j,o,q;
+  it.sort(function(a,b){return a.z-b.z;});
+  for(i=0;i<it.length;i++){
+    var e=it[i];o=e.o;
+    ctx.save();
+    if(e.k==="poly"){
+      ctx.beginPath();
+      for(j=0;j<e.pp.length;j++){q=e.pp[j];if(j===0)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y);}
+      if(o.open!==true)ctx.closePath();
+      if(o.fill){ctx.globalAlpha=o.alpha==null?1:o.alpha;ctx.fillStyle=o.fill;ctx.fill();}
+      if(o.stroke){ctx.globalAlpha=o.salpha==null?1:o.salpha;ctx.strokeStyle=o.stroke;ctx.lineWidth=o.lw||1;ctx.lineJoin="round";ctx.setLineDash(o.dash||[]);ctx.stroke();}
+    }else if(e.k==="line"){
+      ctx.globalAlpha=o.alpha==null?1:o.alpha;ctx.strokeStyle=o.color;ctx.lineWidth=o.lw||2;ctx.lineCap="round";ctx.setLineDash(o.dash||[]);
+      ctx.beginPath();ctx.moveTo(e.a.x,e.a.y);ctx.lineTo(e.b.x,e.b.y);ctx.stroke();
+    }else if(e.k==="dot"){
+      ctx.globalAlpha=o.alpha==null?1:o.alpha;
+      if(o.glow){ctx.shadowColor=o.glow;ctx.shadowBlur=14;}
+      ctx.fillStyle=o.color;ctx.beginPath();ctx.arc(e.a.x,e.a.y,e.r,0,6.2832);ctx.fill();
+      if(o.stroke){ctx.shadowBlur=0;ctx.strokeStyle=o.stroke;ctx.lineWidth=o.lw||2;ctx.stroke();}
+    }else if(e.k==="label"){
+      var fs=o.size||13;
+      ctx.globalAlpha=o.alpha==null?1:o.alpha;
+      ctx.font="800 "+fs+"px 'Segoe UI',Arial,sans-serif";
+      ctx.textAlign="center";ctx.textBaseline="middle";
+      var tw=ctx.measureText(e.t).width,pw=Math.max(tw+16,fs+14),ph=fs+10;
+      var x=e.a.x+(o.dx||0),y=e.a.y+(o.dy||0);
+      ctx.fillStyle=o.bg||"rgba(20,8,50,0.88)";
+      ctx.beginPath();
+      var rr=ph/2;
+      ctx.moveTo(x-pw/2+rr,y-ph/2);ctx.lineTo(x+pw/2-rr,y-ph/2);ctx.arc(x+pw/2-rr,y,rr,-1.5708,1.5708);
+      ctx.lineTo(x-pw/2+rr,y+ph/2);ctx.arc(x-pw/2+rr,y,rr,1.5708,4.7124);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=o.border||"#fff";ctx.lineWidth=o.bw||2;ctx.stroke();
+      ctx.fillStyle=o.color||"#fff";ctx.fillText(e.t,x,y+1);
+    }
+    ctx.restore();
+  }
+};
+function ringPts(c,u,w,R,N,a0,a1){
+  var pts=[],i,a;
+  a0=a0||0;a1=(a1==null?Math.PI*2:a1);
+  for(i=0;i<N;i++){a=a0+(a1-a0)*i/N;pts.push(add(c,add(mul(u,Math.cos(a)*R),mul(w,Math.sin(a)*R))));}
+  return pts;
+}
+
+/* ---------- orbit-by-dragging ---------- */
+function attachOrbit(sc,tgt){
+  var cv=sc.cv,down=false,lx=0,ly=0;
+  function pd(e){down=true;lx=e.clientX;ly=e.clientY;try{cv.setPointerCapture(e.pointerId);}catch(err){}}
+  function pm(e){
+    if(!down)return;
+    var dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;
+    tgt.yaw-=dx*0.008;tgt.pitch=clamp(tgt.pitch+dy*0.008,-1.5,1.5);
+    sc.cam.yaw=tgt.yaw;sc.cam.pitch=tgt.pitch;
+  }
+  function pu(){down=false;}
+  cv.addEventListener("pointerdown",pd);
+  cv.addEventListener("pointermove",pm);
+  cv.addEventListener("pointerup",pu);
+  cv.addEventListener("pointercancel",pu);
+  cv.addEventListener("pointerleave",pu);
+}
+function easeCam(sc,tgt){
+  sc.cam.yaw+=(tgt.yaw-sc.cam.yaw)*0.14;
+  sc.cam.pitch+=(tgt.pitch-sc.cam.pitch)*0.14;
+}
+
+/* ---------- quiz helper ---------- */
+function Quiz(rootId,qs){
+  var root=$(rootId),i=0,score=0,done=false;
+  function render(){
+    var q=qs[i],j,h="";
+    done=false;
+    h+='<h3>&#127919; Quick challenge</h3><div class="qhead">Question '+(i+1)+' of '+qs.length+'</div><div class="qtext">'+q.q+'</div><div class="qopts">';
+    for(j=0;j<q.o.length;j++)h+='<button type="button" class="qopt" data-j="'+j+'">'+q.o[j]+'</button>';
+    h+='</div><div class="qfb"></div><div class="qnav"></div>';
+    root.innerHTML=h;
+    var btns=root.querySelectorAll(".qopt");
+    for(j=0;j<btns.length;j++){(function(b){b.addEventListener("click",function(){answer(parseInt(b.getAttribute("data-j"),10));});})(btns[j]);}
+  }
+  function answer(j){
+    if(done)return;done=true;
+    var q=qs[i],btns=root.querySelectorAll(".qopt"),k;
+    for(k=0;k<btns.length;k++){if(k===q.a)btns[k].className="qopt right";else if(k===j)btns[k].className="qopt wrong";}
+    var ok=(j===q.a);if(ok)score++;
+    root.querySelector(".qfb").innerHTML=(ok?"&#9989; <b>Correct!</b> ":"&#10060; <b>Not quite.</b> ")+q.e;
+    var nav=root.querySelector(".qnav");
+    var b=document.createElement("button");b.type="button";b.className="btn pink";
+    if(i<qs.length-1){b.textContent="Next question \u25B6";b.addEventListener("click",function(){i++;render();});}
+    else{b.textContent="See my score";b.addEventListener("click",function(){
+      root.innerHTML='<h3>&#127919; Quick challenge</h3><div class="qtext">You scored '+score+' / '+qs.length+(score===qs.length?' &mdash; gyro master! &#127881;':' &mdash; have another go!')+'</div><div class="qnav"></div>';
+      var r=document.createElement("button");r.type="button";r.className="btn cyan";r.textContent="Try again";
+      r.addEventListener("click",function(){i=0;score=0;render();});
+      root.querySelector(".qnav").appendChild(r);
+    });}
+    nav.appendChild(b);
+  }
+  render();
+}
+
+/* =====================================================================
+   MODULE 1 : RIGIDITY IN SPACE
+   ===================================================================== */
+var cam1={yaw:-0.55,pitch:0.32,dist:9.6,zoom:1,oy:35},tgt1={yaw:-0.55,pitch:0.32};
+var S1=new Scene($("c1"),cam1);
+attachOrbit(S1,tgt1);
+var M1={a0:[0,1,0],a:[0,1,0],u:[1,0,0],phase:0,s:85,on:true,Rprev:I3(),demo:false,demoT:0,pitch:0,roll:0,yaw:0,Rc:I3(),k:0,t:0};
+
+var AC=[
+  {p:[[0,0,-2.8],[0.38,0,-1.7],[0.38,0,1.7],[0,0,2.5],[-0.38,0,1.7],[-0.38,0,-1.7]],f:"#ff8a3d"},
+  {p:[[0,-0.34,-2.0],[0,0.34,-1.5],[0,0.34,1.6],[0,0.12,2.5],[0,-0.3,1.8]],f:"#ffb36b"},
+  {p:[[0.38,0,-0.6],[3.1,0,0.9],[3.1,0,1.35],[0.38,0,0.8]],f:"#2ee6d6"},
+  {p:[[-0.38,0,-0.6],[-3.1,0,0.9],[-3.1,0,1.35],[-0.38,0,0.8]],f:"#2ee6d6"},
+  {p:[[0.3,0,1.7],[1.4,0,2.35],[1.4,0,2.6],[0.3,0,2.3]],f:"#8b5cf6"},
+  {p:[[-0.3,0,1.7],[-1.4,0,2.35],[-1.4,0,2.6],[-0.3,0,2.3]],f:"#8b5cf6"},
+  {p:[[0,0.1,1.5],[0,1.3,2.35],[0,1.3,2.65],[0,0.1,2.5]],f:"#f06aff"}
+];
+
+function rigidityK(){
+  var ri=(M1.s/100)*(parseInt($("sMass").value,10)/10);
+  return 1/(1+Math.pow(ri*15,2));
+}
+
+function update1(dt){
+  var sp=$("sSpeed"),target=M1.on?parseInt(sp.value,10):0;
+  var tc=target>M1.s?0.6:3.0;
+  M1.s+=(target-M1.s)*(1-Math.exp(-dt/tc));
+  if(Math.abs(target-M1.s)<0.05)M1.s=target;
+  M1.phase+=(M1.s/100)*14*dt;
+  M1.k=rigidityK();
+
+  if(M1.demo){
+    M1.demoT+=dt;
+    setSlider("sPitch",Math.round(30*Math.sin(M1.demoT*0.85)));
+    setSlider("sRoll",Math.round(55*Math.sin(M1.demoT*0.55+1)));
+    setSlider("sYaw",Math.round(70*Math.sin(M1.demoT*0.3)));
+  }
+  M1.pitch=parseFloat($("sPitch").value);M1.roll=parseFloat($("sRoll").value);M1.yaw=parseFloat($("sYaw").value);
+  var Rc=mmul(Ry(-M1.yaw*D2R),mmul(Rx(M1.pitch*D2R),Rz(-M1.roll*D2R)));
+  var dR=mmul(Rc,mT(M1.Rprev));
+  var aa=axisAngle(dR);
+  if(aa){
+    var ang=aa.ang*M1.k;
+    M1.a=rot(M1.a,aa.ax,ang);M1.u=rot(M1.u,aa.ax,ang);
+  }
+  M1.a=nrm(M1.a);M1.u=nrm(sub(M1.u,mul(M1.a,dot(M1.u,M1.a))));
+  M1.Rprev=Rc;M1.Rc=Rc;
+}
+function setSlider(id,v){
+  var s=$(id);if(parseFloat(s.value)!==v){s.value=v;}
+  syncLabels();
+}
+function syncLabels(){
+  $("vSpeed").textContent=$("sSpeed").value+"%";
+  $("vMass").textContent=(parseInt($("sMass").value,10)/10).toFixed(1)+"\u00D7";
+  $("vPitch").textContent=$("sPitch").value+"\u00B0";
+  $("vRoll").textContent=$("sRoll").value+"\u00B0";
+  $("vYaw").textContent=$("sYaw").value+"\u00B0";
+}
+
+function draw1(t){
+  var S=S1;S.begin(t);
+  var Rc=M1.Rc,a=M1.a,u=M1.u,w=cross(a,u),i;
+  /* ground grid (fixed in space) */
+  var gy=-2.9;
+  for(i=-4;i<=4;i++){
+    S.line([i,gy,-4],[i,gy,4],{color:"#63f58a",lw:1,alpha:0.28,bias:-100});
+    S.line([-4,gy,i],[4,gy,i],{color:"#63f58a",lw:1,alpha:0.28,bias:-100});
+  }
+  S.label([3.6,gy,3.6],"EARTH (fixed)",{size:11,bg:"rgba(30,120,60,0.8)",border:"#63f58a",bias:-99});
+
+  /* aircraft */
+  for(i=0;i<AC.length;i++){
+    var pts=[],j;for(j=0;j<AC[i].p.length;j++)pts.push(mvec(Rc,mul(AC[i].p[j],0.78)));
+    S.poly(pts,{fill:AC[i].f,alpha:0.55,stroke:"#ffffff",salpha:0.8,lw:1.2});
+  }
+  S.dot(mvec(Rc,[2.42,0,0.86]),5,{color:"#4ade80",glow:"#4ade80"});
+  S.dot(mvec(Rc,[-2.42,0,0.86]),5,{color:"#ff4d4d",glow:"#ff4d4d"});
+  S.label(mvec(Rc,[0,-0.1,-2.5]),"NOSE",{size:11,dy:14,bg:"rgba(255,138,61,0.9)",border:"#fff"});
+
+  /* rotor */
+  var R=1.3,c=[0,0,0];
+  var mass=parseInt($("sMass").value,10)/10;
+  var rim=ringPts(c,u,w,R,48);
+  var fast=M1.s/100;
+  S.poly(rim,{fill:"#ff4fa3",alpha:0.42,zmin:true,bias:0.001});
+  S.poly(rim,{stroke:"#ffd23f",lw:2+mass*2.2,bias:0.002});
+  S.poly(ringPts(c,u,w,R*0.62,36),{stroke:"#ffffff",salpha:0.45,lw:1.5,bias:0.002});
+  for(i=0;i<6;i++){
+    var ang=M1.phase+i*Math.PI/3;
+    var pe=add(c,add(mul(u,Math.cos(ang)*R),mul(w,Math.sin(ang)*R)));
+    S.line(c,pe,{color:(i%2?"#2ee6d6":"#fff3a0"),lw:3,bias:0.003});
+    S.dot(pe,6+mass,{color:(i%2?"#2ee6d6":"#8aff5c"),bias:0.004});
+  }
+  /* blur ring when fast */
+  if(fast>0.4){S.poly(rim,{stroke:"#fff",salpha:0.15*fast,lw:10,bias:0.0015});}
+
+  /* axle */
+  var axTop=mul(a,2.2),axBot=mul(a,-1.6);
+  S.line(axBot,axTop,{color:"#2ee6d6",lw:6,bias:0.01});
+  S.dot(c,9,{color:"#ffffff",bias:0.011});
+  S.arrow(mul(a,1.6),axTop,{color:"#2ee6d6",lw:6,head:0.45,hw:0.2,bias:0.012});
+
+  /* aircraft UP arrow */
+  var up=mvec(Rc,[0,1,0]);
+  S.arrow(mul(up,0.5),mul(up,2.5),{color:"#f06aff",lw:4,head:0.4,hw:0.17,bias:0.02});
+  S.label(mul(up,2.85),"Aircraft UP",{size:12,dx:-6,dy:-12,bg:"rgba(150,30,170,0.9)",border:"#f06aff",bias:0.03});
+
+  /* fixed star + dashed beam */
+  var T=mul(M1.a0,4.0);
+  S.line(axTop,T,{color:"#ffd23f",lw:2,dash:[7,7],alpha:0.85,bias:-1});
+  S.dot(T,13,{color:"#ffd23f",glow:"#ffd23f",bias:0.5});
+  S.label(T,"\u2605 Fixed point in space",{size:13,dy:-30,bg:"rgba(120,90,0,0.9)",border:"#ffd23f",color:"#fff7c2",bias:0.6});
+  S.label(add(mul(a,2.2),mul(w,0.1)),"Gyro axle",{size:12,dx:-58,dy:2,bg:"rgba(10,120,125,0.92)",border:"#2ee6d6",bias:0.05});
+  S.flush();
+
+  drawInst();
+  updateReadouts1();
+}
+
+function updateReadouts1(){
+  var Rc=M1.Rc;
+  var up=mvec(Rc,[0,1,0]);
+  var tilt=Math.acos(clamp(dot(up,[0,1,0]),-1,1))/D2R;
+  var drift=Math.acos(clamp(dot(M1.a,M1.a0),-1,1))/D2R;
+  $("r1a").textContent=tilt.toFixed(1)+"\u00B0";
+  $("r1b").textContent=drift.toFixed(1)+"\u00B0";
+  var ri=(M1.s/100)*(parseInt($("sMass").value,10)/10);
+  var pct=clamp(1-M1.k,0,1);
+  $("rigBar").style.width=(pct*100).toFixed(0)+"%";
+  $("rigTxt").textContent=pct>0.95?"- locked on!":pct>0.7?"- strong":pct>0.3?"- weak":"- floppy";
+  var hud=[];
+  if(M1.s<2)hud.push('<span class="chip pink">Rotor OFF - the axle just follows the aircraft</span>');
+  else if(M1.k>0.3)hud.push('<span class="chip pink">Rotor slow - weak rigidity</span>');
+  else hud.push('<span class="chip lime">Rotor fast - axle holds its place in space</span>');
+  hud.push('<span class="chip yellow">Rotor speed '+Math.round(M1.s)+'%</span>');
+  var h=hud.join("");
+  if(h!==hud1Cache){$("hud1").innerHTML=h;hud1Cache=h;}
+}
+var hud1Cache="";
+
+function drawInst(){
+  var cv=$("inst"),ctx=cv.getContext("2d"),W=cv.width,R=W/2-6;
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,W);
+  var al=mvec(mT(M1.Rc),M1.a);
+  var rollAng=Math.atan2(al[0],al[1]);
+  var pitch=Math.asin(clamp(-al[2],-1,1))/D2R;
+  var off=pitch*(R/38);
+  ctx.save();
+  ctx.translate(W/2,W/2);
+  ctx.beginPath();ctx.arc(0,0,R,0,6.2832);ctx.clip();
+  ctx.rotate(rollAng);
+  ctx.fillStyle="#35c4ff";ctx.fillRect(-W,-W*2,W*2,W*2+off);
+  ctx.fillStyle="#b9742c";ctx.fillRect(-W,off,W*2,W*2);
+  ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-W,off);ctx.lineTo(W,off);ctx.stroke();
+  ctx.lineWidth=2;ctx.font="bold 14px Arial";ctx.fillStyle="#fff";ctx.textAlign="center";
+  var p;
+  for(p=-30;p<=30;p+=10){
+    if(p===0)continue;
+    var yy=off-p*(R/38),wd=(p%20===0)?46:26;
+    ctx.beginPath();ctx.moveTo(-wd,yy);ctx.lineTo(wd,yy);ctx.stroke();
+    if(p%20===0)ctx.fillText(Math.abs(p),wd+16,yy+5);
+  }
+  ctx.restore();
+  ctx.lineWidth=5;ctx.strokeStyle="#ffd23f";
+  ctx.beginPath();ctx.moveTo(W/2-62,W/2);ctx.lineTo(W/2-18,W/2);ctx.lineTo(W/2-18,W/2+10);
+  ctx.moveTo(W/2+62,W/2);ctx.lineTo(W/2+18,W/2);ctx.lineTo(W/2+18,W/2+10);ctx.stroke();
+  ctx.fillStyle="#ffd23f";ctx.beginPath();ctx.arc(W/2,W/2,5,0,6.2832);ctx.fill();
+  ctx.lineWidth=6;ctx.strokeStyle="#ff4fa3";ctx.beginPath();ctx.arc(W/2,W/2,R,0,6.2832);ctx.stroke();
+  if(M1.k>0.3){
+    ctx.fillStyle="rgba(255,60,60,0.92)";ctx.fillRect(W/2-70,W/2-62,140,32);
+    ctx.fillStyle="#fff";ctx.font="bold 17px Arial";ctx.textAlign="center";ctx.fillText("GYRO LOW RPM",W/2,W/2-40);
+  }
+}
+
+/* module 1 UI */
+function wire1(){
+  var ids=["sSpeed","sMass","sPitch","sRoll","sYaw"],i;
+  for(i=0;i<ids.length;i++){$(ids[i]).addEventListener("input",function(){syncLabels();});}
+  ["sPitch","sRoll","sYaw"].forEach(function(id){
+    $(id).addEventListener("pointerdown",function(){M1.demo=false;$("demoBtn").textContent="\u2708 Auto-fly demo";});
+  });
+  $("rotorBtn").addEventListener("click",function(){
+    M1.on=!M1.on;
+    this.textContent="Rotor: "+(M1.on?"ON":"OFF");
+    this.className="btn "+(M1.on?"lime":"off");
+  });
+  $("demoBtn").addEventListener("click",function(){
+    M1.demo=!M1.demo;if(M1.demo)M1.demoT=0;
+    this.textContent=M1.demo?"\u25A0 Stop demo":"\u2708 Auto-fly demo";
+  });
+  $("bumpBtn").addEventListener("click",function(){
+    var th=Math.random()*6.2832,ax=[Math.cos(th),0,Math.sin(th)];
+    var kick=40*D2R*M1.k;
+    M1.a=rot(M1.a,ax,kick);M1.u=rot(M1.u,ax,kick);
+  });
+  $("realignBtn").addEventListener("click",function(){
+    M1.a=[0,1,0];M1.u=[1,0,0];
+  });
+  $("resetBtn").addEventListener("click",function(){
+    M1.demo=false;$("demoBtn").textContent="\u2708 Auto-fly demo";
+    $("sPitch").value=0;$("sRoll").value=0;$("sYaw").value=0;
+    $("sSpeed").value=85;$("sMass").value=15;
+    M1.on=true;M1.s=85;$("rotorBtn").textContent="Rotor: ON";$("rotorBtn").className="btn lime";
+    M1.a=[0,1,0];M1.u=[1,0,0];M1.Rprev=I3();M1.Rc=I3();
+    syncLabels();
+  });
+  $("v1reset").addEventListener("click",function(){tgt1.yaw=-0.55;tgt1.pitch=0.32;});
+  syncLabels();
+}
+new Quiz("quiz1",[
+  {q:"The rotor is spinning fast and you roll the aircraft 60&deg;. What does the gyro axle do?",
+   o:["It rolls with the aircraft","It keeps pointing at the same spot in space","It speeds up"],a:1,
+   e:"Rigidity in space: with no force on it, a fast rotor holds its original direction while the aircraft moves around it."},
+  {q:"Which change makes a gyro MORE rigid?",
+   o:["Slower spin","Lighter rotor","Faster spin and a heavier rotor with weight at the rim"],a:2,
+   e:"Rigidity increases with rotor mass, spin speed and how far the mass sits from the axle (rim-weighted)."},
+  {q:"After a power failure the gyro horizon rotor is running down. What is the problem?",
+   o:["Rigidity drops, so the rotor is pushed around and the reading becomes unreliable","The instrument becomes more accurate","Nothing - rigidity does not depend on speed"],a:0,
+   e:"As speed falls, rigidity falls. Friction and drift then win and the indication wanders."}
+]);
+
+/* =====================================================================
+   MODULE 2 : PRECESSION
+   ===================================================================== */
+var cam2={yaw:0.55,pitch:0.3,dist:9.5,zoom:1,oy:10},tgt2={yaw:0.55,pitch:0.3};
+var S2=new Scene($("c2"),cam2);
+attachOrbit(S2,tgt2);
+var R2=1.8;
+var M2={n:[0,0,1],u:[0,1,0],s:-1,speed:70,pos:0,dir:-1,strength:5,pushing:false,pulse:0,phase:0,total:0,rate:0,
+        mode:"step",sf:0.5,step:0,auto:false,autoT:0,
+        cur:{tilt:0,force:0,marker:0,showA:0,expect:0,actual:0,clock:0,fast:0}};
+
+var STEPS=[
+ {t:"Meet the spinning wheel",x:"A fast-spinning wheel, like a bicycle wheel, with its axle pointing at you. It spins <b>clockwise</b> as you see it. It is stubborn - that is rigidity in space - so it resists being tipped.",tilt:0,force:0,marker:0,showA:0,expect:0,actual:0,clock:0,fast:0},
+ {t:"Learn the clock positions",x:"Picture a clock face on the wheel: <b>12</b> at the top, <b>3</b> on the right, <b>6</b> at the bottom, <b>9</b> on the left. We will use the clock to say exactly where things happen.",tilt:0,force:0,marker:0,showA:0,expect:0,actual:0,clock:1,fast:0},
+ {t:"Pick the push point",x:"We will push on the rim at <b>12 o'clock</b>. The red dot <b>A</b> marks the piece of rim that is at 12 right now.",tilt:0,force:0,marker:0,showA:1,expect:0,actual:0,clock:1,fast:0},
+ {t:"Apply the push",x:"Push the 12 o'clock rim <b>away from you</b> (red arrow). Common sense says the top of the wheel should tip away. Keep that guess in mind...",tilt:0,force:1,marker:0,showA:1,expect:1,actual:0,clock:1,fast:0},
+ {t:"The spin carries the push round",x:"The wheel is spinning clockwise, so point A is carried from 12 towards 3 (now near <b>1 o'clock</b>). The wheel starts to turn - but not top-away.",tilt:0.25,force:1,marker:40,showA:1,expect:0,actual:0,clock:1,fast:0},
+ {t:"Still turning",x:"Point A has travelled to about <b>2 o'clock</b>. The wheel keeps turning about the vertical line through its centre. The turn is growing.",tilt:0.55,force:1,marker:70,showA:1,expect:0,actual:0,clock:1,fast:0},
+ {t:"Maximum effect at 3 o'clock",x:"Point A reaches <b>3 o'clock</b> - a quarter turn (90&deg;) after the push. Now the effect is biggest: the <b>3 o'clock side moves away</b> from you (green arrow).",tilt:0.8,force:1,marker:90,showA:1,expect:0,actual:1,clock:1,fast:0},
+ {t:"The wheel has precessed",x:"Result: the wheel has turned about its <b>vertical axis</b>. Compare with the dashed outline (where it started). The right-hand side moved away; the top did not.",tilt:1,force:0,marker:90,showA:1,expect:0,actual:1,clock:1,fast:0},
+ {t:"Expected vs actual",x:"You expected the top to go away (&#10060;). What really happened: the <b>3 o'clock side moved away</b> (&#9989;). This sideways reaction is called <b>PRECESSION</b>.",tilt:1,force:0,marker:90,showA:1,expect:1,actual:1,clock:1,fast:0},
+ {t:"The rule to remember",x:"<b>Push at 12 &rarr; effect at 3.</b> The effect appears 90&deg; later, in the direction of spin. For an anticlockwise wheel the effect would show up at 9 instead. Try it in Free play.",tilt:1,force:0,marker:90,showA:1,expect:0,actual:1,clock:1,fast:0},
+ {t:"Fast spin = stiffer wheel",x:"Spin the wheel faster and the same push gives a <b>smaller, slower</b> precession. Spin it slower and it precesses more easily. Rigidity and precession are linked.",tilt:1,force:0,marker:90,showA:0,expect:0,actual:0,clock:1,fast:1},
+ {t:"Where you see it on aircraft",x:"<b>Turn coordinator / turn and slip:</b> the turning aircraft pushes the gyro, it precesses, and the gimbal tilt shows the turn rate. <b>Propeller:</b> a clockwise prop pitched nose-up tends to yaw the nose right. Same rule, same 90&deg;.",tilt:0,force:0,marker:0,showA:0,expect:0,actual:0,clock:1,fast:0}
+];
+
+function ahead(){return M2.s===-1?90:-90;}
+function posName(deg){var d=((deg%360)+360)%360;return d===0?"12":d===90?"3":d===180?"6":"9";}
+
+function update2(dt){
+  var sfx=(M2.mode==="step")?M2.sf:1;
+  var rate,i;
+  if(M2.mode==="step"){
+    var st=STEPS[M2.step],c=M2.cur,k=1-Math.exp(-dt*1.2*sfx);
+    var keys=["tilt","force","marker","showA","expect","actual","clock","fast"];
+    for(i=0;i<keys.length;i++){c[keys[i]]+=(st[keys[i]]-c[keys[i]])*k;}
+    rate=(0.55+0.6*c.fast)*10;
+    M2.phase+=rate*dt*sfx;
+    if(M2.auto){
+      M2.autoT+=dt*sfx;
+      if(M2.autoT>5.5){
+        M2.autoT=0;
+        if(M2.step<STEPS.length-1){goStep(M2.step+1);}
+        else{M2.auto=false;$("stAuto").innerHTML="&#9654; Auto-play";}
+      }
+    }
+    var phi=c.tilt*35*D2R;
+    M2.n=[Math.sin(phi),0,Math.cos(phi)];M2.u=[0,1,0];
+    M2.total=c.tilt*35;
+  }else{
+    rate=(M2.speed/100)*12;
+    M2.phase+=-M2.s*rate*dt;
+    var active=M2.pushing||M2.pulse>0;
+    if(M2.pulse>0)M2.pulse=Math.max(0,M2.pulse-dt);
+    var dAng=0;
+    if(active){
+      var n=M2.n,u=M2.u,v=cross(u,n);
+      var th=M2.pos*D2R;
+      var r=add(mul(u,Math.cos(th)*R2),mul(v,Math.sin(th)*R2));
+      var F=mul(n,M2.dir*M2.strength);
+      var tau=cross(r,F);
+      var Lm=M2.speed/50;
+      var kScale=(8*D2R)/R2;
+      var dn=mul(tau,M2.s*kScale/Lm*dt);
+      var nNew=nrm(add(n,dn));
+      var axv=cross(n,nNew),sn=len(axv);
+      if(sn>1e-9){
+        dAng=Math.asin(Math.min(1,sn));
+        var ax=mul(axv,1/sn);
+        M2.u=rot(u,ax,dAng);M2.n=nNew;
+        M2.total+=dAng/D2R;
+      }
+      M2.u=nrm(sub(M2.u,mul(M2.n,dot(M2.u,M2.n))));
+    }
+    var inst=dAng/D2R/Math.max(dt,1e-4);
+    M2.rate+=(inst-M2.rate)*Math.min(1,dt*6);
+  }
+}
+
+function draw2(t){
+  var S=S2;S.begin(t);
+  var n=M2.n,u=M2.u,v=cross(u,n),i,c=[0,0,0];
+  var step=(M2.mode==="step");
+  function wp(deg,rad){var a=deg*D2R;return add(mul(u,Math.cos(a)*rad),mul(v,Math.sin(a)*rad));}
+
+  /* floor shadow */
+  S.poly(ringPts([0,-2.9,0],[1,0,0],[0,0,1],2.4,40),{fill:"#000",alpha:0.25,bias:-100,zmin:true});
+
+  /* ghost start outline */
+  S.poly(ringPts(c,[0,1,0],[1,0,0],R2,60),{stroke:"#ffffff",salpha:0.45,lw:2,dash:[6,6],bias:-50});
+
+  /* wheel */
+  var rim=ringPts(c,u,v,R2,60);
+  S.poly(rim,{fill:"#8b5cf6",alpha:0.38,zmin:true,bias:0.001});
+  S.poly(rim,{stroke:"#ffd23f",lw:9,bias:0.002});
+  S.poly(ringPts(c,u,v,R2*0.86,48),{stroke:"#ff4fa3",salpha:0.8,lw:2,bias:0.002});
+
+  /* direction chevrons (fixed on the face) */
+  var cwSign=(M2.s===-1)?1:-1;
+  for(i=0;i<4;i++){
+    var ca=45+i*90,pa=wp(ca,R2*0.62);
+    var tang=add(mul(u,-Math.sin(ca*D2R)*cwSign),mul(v,Math.cos(ca*D2R)*cwSign));
+    var rad=nrm(pa);
+    S.poly([add(pa,mul(tang,0.24)),add(sub(pa,mul(tang,0.1)),mul(rad,0.12)),sub(sub(pa,mul(tang,0.1)),mul(rad,0.12))],{fill:"#fff",alpha:0.8,bias:0.003});
+  }
+
+  /* spokes + beads */
+  var cols=["#2ee6d6","#ff8a3d","#8aff5c","#ff4fa3"];
+  for(i=0;i<8;i++){
+    var ang=M2.phase+i*Math.PI/4;
+    var pe=add(c,add(mul(u,Math.cos(ang)*R2),mul(v,Math.sin(ang)*R2)));
+    S.line(c,pe,{color:cols[i%4],lw:3,alpha:0.9,bias:0.004});
+    S.dot(pe,7,{color:cols[i%4],bias:0.005});
+  }
+
+  /* axle */
+  S.line(mul(n,-1.9),mul(n,1.9),{color:"#e5e7eb",lw:7,bias:0.01});
+  S.dot(mul(n,1.9),9,{color:"#2ee6d6",bias:0.011});
+  S.dot(mul(n,-1.9),9,{color:"#2ee6d6",bias:0.011});
+  S.dot(c,11,{color:"#ffffff",bias:0.012});
+
+  /* clock labels */
+  var clockOn=step?M2.cur.clock:1;
+  var pushDeg=step?0:M2.pos;
+  var effDeg=pushDeg+ahead();
+  var hl=step?(M2.cur.force>0.5?0:-999):pushDeg;
+  var nums=[[0,"12"],[90,"3"],[180,"6"],[270,"9"]];
+  if(clockOn>0.1){
+    for(i=0;i<4;i++){
+      var d=nums[i][0],isPush=(((d-hl)%360)+360)%360===0&&hl>-900;
+      var isEff=(!step&&Math.abs(M2.total)>2&&(((d-effDeg)%360)+360)%360===0)||(step&&M2.cur.actual>0.5&&d===90);
+      var bg="rgba(20,8,50,0.9)",bd="#cbb8ff";
+      if(isPush){bg="rgba(190,30,60,0.95)";bd="#ff8a8a";}
+      if(isEff){bg="rgba(20,130,60,0.95)";bd="#8aff5c";}
+      S.label(wp(d,R2+0.62),nums[i][1],{size:17,bg:bg,border:bd,alpha:Math.min(1,clockOn),bias:0.02});
+    }
+    var hrs=[30,60,120,150,210,240,300,330];
+    for(i=0;i<hrs.length;i++)S.dot(wp(hrs[i],R2+0.3),3.5,{color:"#cbb8ff",alpha:0.8*Math.min(1,clockOn),bias:0.02});
+  }
+
+  /* marker A */
+  var showA=step?M2.cur.showA:0;
+  if(showA>0.05){
+    var mk=step?M2.cur.marker:0;
+    var pa=wp(mk,R2);
+    S.dot(pa,11,{color:"#ff3b3b",glow:"#ff3b3b",stroke:"#fff",alpha:Math.min(1,showA),bias:0.03});
+    S.label(wp(mk,R2-0.45),"A",{size:14,bg:"rgba(190,30,60,0.95)",border:"#fff",alpha:Math.min(1,showA),bias:0.031});
+  }
+
+  /* push arrow */
+  var fa=step?M2.cur.force:((M2.pushing||M2.pulse>0)?1:0.3);
+  var dirSign=step?-1:M2.dir;
+  var d3=mul(n,dirSign);
+  var pr=wp(pushDeg,R2);
+  if(fa>0.05){
+    var pushing=step?true:(M2.pushing||M2.pulse>0);
+    S.arrow(sub(pr,mul(d3,1.7)),pr,{color:"#ff3b3b",lw:6,head:0.45,hw:0.2,alpha:Math.min(1,fa),dash:(!step&&!pushing)?[6,6]:null,bias:3});
+    S.label(sub(pr,mul(d3,1.9)),"PUSH",{size:12,dy:-4,bg:"rgba(190,30,60,0.95)",border:"#fff",alpha:Math.min(1,fa),bias:0.05});
+  }
+
+  /* expected arrow (step mode) */
+  if(step&&M2.cur.expect>0.05){
+    var ex=M2.cur.expect;
+    var tip=add(wp(0,R2),mul(n,-1.3));
+    S.arrow(add(wp(0,R2),mul(n,0.2)),tip,{color:"#ffb347",lw:4,head:0.3,hw:0.14,dash:[5,5],alpha:Math.min(1,ex),bias:0.04});
+    S.label(tip,"Expected: top tips away \u2717",{size:12,dy:-30,dx:95,bg:"rgba(120,70,0,0.92)",border:"#ffb347",alpha:Math.min(1,ex),bias:0.05});
+  }
+
+  /* actual effect arrow */
+  var show=false,ap=null,ad=null,aAlpha=1;
+  if(step){
+    if(M2.cur.actual>0.05){show=true;aAlpha=M2.cur.actual;}
+    ap=wp(90,R2);ad=mul(n,-1);
+  }else if(Math.abs(M2.total)>2){
+    show=true;ap=wp(effDeg,R2);ad=d3;
+    aAlpha=Math.min(1,Math.abs(M2.total)/10);
+  }
+  if(show){
+    var tip2=add(ap,mul(ad,1.5));
+    S.arrow(ap,tip2,{color:"#8aff5c",lw:6,head:0.45,hw:0.2,alpha:Math.min(1,aAlpha),bias:3});
+    S.label(tip2,(step?"3 o'clock moves away \u2713":"Biggest movement here \u2713"),{size:12,dy:-26,bg:"rgba(20,110,50,0.95)",border:"#8aff5c",alpha:Math.min(1,aAlpha),bias:0.05});
+  }
+  S.flush();
+
+  drawTop();
+  /* HUD + readouts */
+  var h;
+  var spinChip='<span class="chip cyan">'+(M2.s===-1?'&#8635; Spins clockwise':'&#8634; Spins anticlockwise')+' (as you face the wheel)</span>';
+  if(step){
+    h='<span class="chip cyan">Step '+(M2.step+1)+' of '+STEPS.length+(M2.sf<1?' &middot; slow-mo '+(M2.sf===0.5?'&frac12;':'&frac14;')+'&times;':'')+'</span>';
+    h+='<span class="chip yellow">Push at 12 &rarr; effect at 3</span>'+spinChip;
+  }else{
+    h='<span class="chip pink">Push at '+posName(pushDeg)+' &rarr; effect at '+posName(effDeg)+'</span>';
+    h+=spinChip;
+  }
+  if(h!==hud2Cache){$("hud2").innerHTML=h;hud2Cache=h;}
+  if(!step){
+    $("r2a").textContent=Math.round(M2.total)+"\u00B0";
+    $("r2b").textContent=(M2.pushing||M2.pulse>0?M2.rate:0).toFixed(0)+"\u00B0/s";
+  }
+}
+var hud2Cache="";
+function drawTop(){
+  var cv=$("top2"),ctx=cv.getContext("2d"),W=cv.width,cx=W/2,cy=W/2+8,sc=W*0.30/R2;
+  var step=(M2.mode==="step");
+  var n=M2.n,u=M2.u,v=cross(u,n);
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,W);
+  function X(x,z){return [cx+x*sc,cy+z*sc];}
+  var p,q;
+  /* start position (ghost) */
+  ctx.setLineDash([8,8]);ctx.strokeStyle="rgba(255,255,255,0.6)";ctx.lineWidth=3;
+  p=X(-R2,0);q=X(R2,0);ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();
+  ctx.setLineDash([]);
+  /* current wheel edge-on */
+  ctx.lineCap="round";ctx.strokeStyle="#ffd23f";ctx.lineWidth=12;
+  p=X(-v[0]*R2,-v[2]*R2);q=X(v[0]*R2,v[2]*R2);
+  ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();
+  /* axle arrow (front face normal) */
+  var a0=X(0,0),a1=X(n[0]*R2*0.8,n[2]*R2*0.8);
+  ctx.strokeStyle="#e5e7eb";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(a0[0],a0[1]);ctx.lineTo(a1[0],a1[1]);ctx.stroke();
+  ctx.fillStyle="#2ee6d6";ctx.beginPath();ctx.arc(a1[0],a1[1],8,0,6.2832);ctx.fill();
+  /* 3 and 9 ends */
+  ctx.font="bold 20px Arial";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillStyle="#8aff5c";ctx.beginPath();ctx.arc(q[0],q[1],14,0,6.2832);ctx.fill();ctx.fillStyle="#06300f";ctx.fillText("3",q[0],q[1]+1);
+  ctx.fillStyle="#cbb8ff";ctx.beginPath();ctx.arc(p[0],p[1],14,0,6.2832);ctx.fill();ctx.fillStyle="#241352";ctx.fillText("9",p[0],p[1]+1);
+  /* viewer + away */
+  ctx.fillStyle="#fff";ctx.font="bold 18px Arial";
+  ctx.fillText("\u25BC YOU (viewer)",cx,W-16);
+  ctx.fillStyle="#b9acf0";ctx.font="bold 15px Arial";ctx.fillText("\u25B2 away from you",cx,20);
+}
+
+function renderStep(){
+  var st=STEPS[M2.step],i,h="";
+  $("stNo").textContent="Step "+(M2.step+1)+" of "+STEPS.length;
+  $("stTitle").textContent=st.t;
+  $("stTxt").innerHTML=st.x;
+  for(i=0;i<STEPS.length;i++){
+    h+='<button type="button" data-st="'+i+'" class="'+(i===M2.step?"now":(i<M2.step?"done":""))+'">'+(i+1)+'</button>';
+  }
+  $("stDots").innerHTML=h;
+  var bs=$("stDots").querySelectorAll("button");
+  for(i=0;i<bs.length;i++){(function(b){b.addEventListener("click",function(){M2.auto=false;$("stAuto").innerHTML="&#9654; Auto-play";goStep(parseInt(b.getAttribute("data-st"),10));});})(bs[i]);}
+  $("stPrev").style.opacity=M2.step===0?0.5:1;
+  $("stNext").style.opacity=M2.step===STEPS.length-1?0.5:1;
+}
+function goStep(i){
+  M2.step=clamp(i,0,STEPS.length-1);M2.autoT=0;renderStep();
+}
+function setMode(m){
+  M2.mode=m;
+  $("guided").style.display=(m==="step")?"block":"none";
+  $("free").style.display=(m==="free")?"block":"none";
+  $("modeStep").className=(m==="step")?"on":"";
+  $("modeFree").className=(m==="free")?"on":"";
+  resetWheel();
+  if(m==="step"){goStep(0);}
+}
+function resetWheel(){
+  M2.n=[0,0,1];M2.u=[0,1,0];M2.total=0;M2.rate=0;M2.pushing=false;M2.pulse=0;
+  M2.cur={tilt:0,force:0,marker:0,showA:0,expect:0,actual:0,clock:0,fast:0};
+  $("pushBtn").innerHTML="&#9654; Start pushing";$("pushBtn").className="btn pink";
+}
+function selOnly(list,el){for(var i=0;i<list.length;i++)list[i].className=list[i].className.replace(" sel","");el.className+=" sel";}
+
+function wire2(){
+  $("modeStep").addEventListener("click",function(){setMode("step");});
+  $("modeFree").addEventListener("click",function(){M2.auto=false;$("stAuto").innerHTML="&#9654; Auto-play";setMode("free");});
+  $("stPrev").addEventListener("click",function(){M2.auto=false;$("stAuto").innerHTML="&#9654; Auto-play";goStep(M2.step-1);});
+  $("stNext").addEventListener("click",function(){M2.auto=false;$("stAuto").innerHTML="&#9654; Auto-play";goStep(M2.step+1);});
+  $("stRestart").addEventListener("click",function(){M2.auto=false;$("stAuto").innerHTML="&#9654; Auto-play";M2.cur={tilt:0,force:0,marker:0,showA:0,expect:0,actual:0,clock:0,fast:0};goStep(0);});
+  $("stAuto").addEventListener("click",function(){
+    M2.auto=!M2.auto;M2.autoT=0;
+    this.innerHTML=M2.auto?"&#9632; Pause":"&#9654; Auto-play";
+    if(M2.auto&&M2.step===STEPS.length-1){goStep(0);}
+  });
+  var sfb=document.querySelectorAll("[data-sf]"),i;
+  for(i=0;i<sfb.length;i++){(function(b){b.addEventListener("click",function(){M2.sf=parseFloat(b.getAttribute("data-sf"));selOnly(sfb,b);});})(sfb[i]);}
+
+  var cw=$("dirCW"),ccw=$("dirCCW");
+  cw.addEventListener("click",function(){M2.s=-1;selOnly([cw,ccw],cw);});
+  ccw.addEventListener("click",function(){M2.s=1;selOnly([cw,ccw],ccw);});
+  var pb=document.querySelectorAll("[data-pos]");
+  for(i=0;i<pb.length;i++){(function(b){b.addEventListener("click",function(){M2.pos=parseInt(b.getAttribute("data-pos"),10);selOnly(pb,b);});})(pb[i]);}
+  var pa=$("pdAway"),pt=$("pdToward");
+  pa.addEventListener("click",function(){M2.dir=-1;selOnly([pa,pt],pa);});
+  pt.addEventListener("click",function(){M2.dir=1;selOnly([pa,pt],pt);});
+  $("sSpin2").addEventListener("input",function(){M2.speed=parseInt(this.value,10);$("vSpin2").textContent=this.value+"%";});
+  $("sForce2").addEventListener("input",function(){M2.strength=parseInt(this.value,10);$("vForce2").textContent=this.value;});
+  $("pushBtn").addEventListener("click",function(){
+    M2.pushing=!M2.pushing;
+    this.innerHTML=M2.pushing?"&#9632; Stop pushing":"&#9654; Start pushing";
+    this.className="btn "+(M2.pushing?"lime":"pink");
+  });
+  $("tapBtn").addEventListener("click",function(){M2.pulse=0.5;});
+  $("reset2").addEventListener("click",resetWheel);
+
+  var vb=document.querySelectorAll("[data-view]");
+  for(i=0;i<vb.length;i++){(function(b){b.addEventListener("click",function(){
+    var v=b.getAttribute("data-view");
+    if(v==="3d"){tgt2.yaw=0.55;tgt2.pitch=0.3;}
+    else if(v==="front"){tgt2.yaw=0;tgt2.pitch=0.02;}
+    else if(v==="top"){tgt2.yaw=0;tgt2.pitch=1.45;}
+    else{tgt2.yaw=-1.5;tgt2.pitch=0.02;}
+  });})(vb[i]);}
+  renderStep();
+}
+new Quiz("quiz2",[
+  {q:"The wheel spins clockwise. You push the 12 o'clock rim away from you. Which part of the rim moves away most?",
+   o:["12 o'clock (top)","3 o'clock","6 o'clock","9 o'clock"],a:1,
+   e:"Effect appears 90&deg; later in the direction of spin. Clockwise: 12 &rarr; 3."},
+  {q:"Same push at 12 o'clock, but the wheel spins ANTICLOCKWISE. Where is the biggest effect?",
+   o:["3 o'clock","6 o'clock","9 o'clock","12 o'clock"],a:2,
+   e:"Reverse the spin and you reverse the direction of the 90&deg; shift: 12 &rarr; 9."},
+  {q:"Same push, but the wheel spins faster. What happens to the precession?",
+   o:["It gets faster","It gets slower - the wheel is stiffer","It stays the same"],a:1,
+   e:"Precession rate = push (torque) divided by the wheel's angular momentum. More spin means less precession for the same push."},
+  {q:"A clockwise propeller (pilot's view) is pitched nose-up. Which way does the nose tend to yaw?",
+   o:["Left","Right"],a:1,
+   e:"Nose-up pushes the top of the prop disc backwards. For a clockwise wheel, the effect shows 90&deg; later at 3 o'clock, so the right side moves back and the nose yaws right."}
+]);
+
+/* ---------- tabs ---------- */
+var active=1;
+function showTab(n){
+  active=n;
+  $("mod1").className="module"+(n===1?" active":"");
+  $("mod2").className="module"+(n===2?" active":"");
+  $("tab1").className="tab t1"+(n===1?" active":"");
+  $("tab2").className="tab t2"+(n===2?" active":"");
+}
+$("tab1").addEventListener("click",function(){showTab(1);});
+$("tab2").addEventListener("click",function(){showTab(2);});
+
+wire1();wire2();
+
+/* ---------- main loop ---------- */
+var last=0;
+function frame(ts){
+  var t=ts/1000,dt=Math.min(0.05,Math.max(0,t-last));last=t;
+  try{
+    if(active===1){easeCam(S1,tgt1);update1(dt);draw1(t);}
+    else{easeCam(S2,tgt2);update2(dt);draw2(t);}
+  }catch(err){
+    var e=$("errbar");e.style.display="block";e.textContent="Error: "+err.message;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* expose for test harness */
+window.__gyro={M1:M1,M2:M2,update1:update1,update2:update2,draw1:draw1,draw2:draw2,showTab:showTab,goStep:goStep,setMode:setMode};
+})();
+</script>
+</body>
+</html>
